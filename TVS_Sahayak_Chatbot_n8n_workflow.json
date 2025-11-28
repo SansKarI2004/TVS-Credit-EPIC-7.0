@@ -1,0 +1,592 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Telegram Trigger').item.json.message.text }}",
+        "options": {
+          "systemMessage": "=# ROLE\n\nYou are a finance assistant chatbot named Sahayak for TVS Credit specializing in loan collections. Your role is to answer any finance-related query from the user, including loan terms, interest, EMI calculations, restructuring plans, and settlement options. You have access to a customer database and can fetch relevant details to provide accurate, personalized responses.\n\nYou must:\nIf any info in {{ $json['CustData Memories'] }} missing or null then ask the user for this info.\nRecognize the user's tone and persona  (Cooperative, Evasive, Aggressive, Confused, Standard) using sentiment and intent detection and also the risk of the user being default (High,Low,Medium).this are available to you in the CustData Memories \nRespond empathetically, assertively, or informatively based on both risk level (High, Medium, Low) and persona.\nProvide actionable solutions such as EMI restructuring, early repayment discounts, or settlement offers depending on the situation.\nAlways guide the user towards compliance and financial well-being while maintaining a respectful, human-like tone.\nPresent them with options you are capable of.\nif a user wants to contact a human agent then respond that a agent will shortly contact you to resolve the query.\n\nRisk-Persona Response Mapping:\nHigh Risk:\nAggressive: Senior escalation & pause automated contact.\nCooperative: Empathetic human call to offer solutions.\nEvasive: Assertive follow-up across multiple channels with settlement option.\nConfused: Problem-solving human call.\nStandard: Firm human call to discuss payment.\n\nMedium Risk:\nAggressive: Immediate handoff to human agent.\nCooperative: Chatbot with flexible payment options.\nEvasive: Automated SMS/Email follow-up with restructuring option.\nConfused: Step-by-step chatbot payment guide.\nStandard: Assertive chatbot reminder.\n\nLow Risk:\nAggressive: Formal but automated notice.\nCooperative: Gentle chatbot nudge.\nEvasive: Proactive chatbot message with EMI repayment, early repayment discounts, and waiver offers.\nConfused: Informative chatbot explaining bill details.\nStandard: Standard automated reminder.\nWhen unsure, ask clarifying questions before responding. Your goal is to balance collection efficiency with customer satisfaction.\n\n# RULES\n\nWhen the user sends a new message, decide if they shared any **noteworthy information** that should be **saved in memory** for future reference.\n\nIf so, use the **Send Data** tool to store this information.\nDO NOT inform the user that you are saving this information.\n\nSimply continue the conversation as normal.\n\n# Tools\n\n## Send Data\n\nUse this tool to **store any important facts** shared by the user.\nSummarize the information clearly and pass it to this tool.\n\n# Memories\n\nThese are the **last stored facts** collected from the user (including date/time).\n{{ $json[\"CustData Memories\"] ? $json[\"CustData Memories\"].toJsonString() : \"\" }}\n\n\n!! IMPORTANT !!\nTake these stored facts and memories from  {{ $json['CustData Memories'] }} into account when replying.\n**If a fact was already stored, do not repeat asking for it.**\n\nRespond naturally and conversationally.\n\n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        256
+      ],
+      "id": "8257abc5-7a82-4a6b-99d2-5a1039836d0b",
+      "name": "AI Agent",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        680,
+        480
+      ],
+      "id": "98333092-2f85-49c4-9c1c-fc4aabb643be",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "qdD9sZAOwSTvVtfq",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1024,
+        256
+      ],
+      "id": "010aac28-9333-4216-88c2-0f18e987cbd6",
+      "name": "Send a text message",
+      "webhookId": "0e07e458-7c8d-4b9b-8e74-d74585cb6ea2",
+      "credentials": {
+        "telegramApi": {
+          "id": "dU0pMcgN2BbVVLzn",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -672,
+        352
+      ],
+      "id": "f1ba7298-ee43-461e-a2ff-bd1a804653ca",
+      "name": "Telegram Trigger",
+      "webhookId": "9beb5556-a747-45e0-81ac-ec9577bde8fc",
+      "credentials": {
+        "telegramApi": {
+          "id": "dU0pMcgN2BbVVLzn",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "Conversational memory",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "Chat id",
+              "condition": "eq",
+              "keyValue": "={{ $json.message.chat.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -448,
+        208
+      ],
+      "id": "25c63bf2-3df8-4fdb-ac71-53e6869b8ad0",
+      "name": "Get many rows",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "zlWAFVWfgzHtKyA1",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "ConversationMemories",
+        "include": "specifiedFields",
+        "fieldsToInclude": "Message",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        208
+      ],
+      "id": "12290879-736e-4683-b6a2-7aba7baf6a6a",
+      "name": "Aggregate",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "tableId": "Conversational memory",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "Message",
+              "fieldValue": "={{ $('Telegram Trigger').item.json.message.text }}"
+            },
+            {
+              "fieldId": "Sender First name",
+              "fieldValue": "={{ $('Telegram Trigger').item.json.message.from.first_name }}"
+            },
+            {
+              "fieldId": "Sender Last name",
+              "fieldValue": "={{ $('Telegram Trigger').item.json.message.from.last_name }}"
+            },
+            {
+              "fieldId": "Chat id",
+              "fieldValue": "={{ $('Telegram Trigger').item.json.message.from.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        808,
+        480
+      ],
+      "id": "1c840ed2-889e-45ad-9b71-e2ff4931c979",
+      "name": "Send Data",
+      "credentials": {
+        "supabaseApi": {
+          "id": "zlWAFVWfgzHtKyA1",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "Customer Data",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "Chat id",
+              "condition": "eq",
+              "keyValue": "={{ $json.message.chat.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "Customer Chat History",
+              "fieldValue": "={{ $json.message.text }},\n{{ $json.ConversationMemories ? $json.ConversationMemories.toJsonString() : \"\" }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        496
+      ],
+      "id": "025bb7ed-fd85-44e3-89fd-b270c4d2e5d4",
+      "name": "Update a row",
+      "alwaysOutputData": true,
+      "executeOnce": false,
+      "credentials": {
+        "supabaseApi": {
+          "id": "zlWAFVWfgzHtKyA1",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "CustData Memories",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        448,
+        256
+      ],
+      "id": "ba2b6df6-0dd0-4fec-8210-a5f69e101b50",
+      "name": "Aggregate1",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cdc00936-463b-4b9f-be69-3f50fa28a09b",
+              "leftValue": "={{ $json['Chat id'] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        496
+      ],
+      "id": "e8712f01-aa46-40b7-8a20-03a4665992e8",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.ConversationMemories }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "array",
+                      "operation": "empty",
+                      "singleValue": true
+                    },
+                    "id": "8d4ff712-a8ba-427c-a693-4e6b9a5cadf7"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "No memory"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "7e7f1586-23cd-40a2-8e2c-2b17ddca1195",
+                    "leftValue": "={{ $json.ConversationMemories }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "array",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Memory Present"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        0,
+        208
+      ],
+      "id": "d93491ec-f64d-40a3-b93e-fe85cbb51a3e",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "tableId": "Customer Data",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "Chat id",
+              "fieldValue": "={{$('Telegram Trigger').item.json.message.chat.id }}"
+            },
+            {
+              "fieldId": "Customer Chat History",
+              "fieldValue": "={{ $('Telegram Trigger').item.json.message.text }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        224,
+        448
+      ],
+      "id": "41830b1b-3a1e-4639-a7fd-2f8fdee7c495",
+      "name": "Create a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "zlWAFVWfgzHtKyA1",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        224,
+        256
+      ],
+      "id": "838eae86-61d1-415c-8001-2cc91f5bd31f",
+      "name": "Merge",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "=\"Welcome {{ $('Telegram Trigger').item.json.message.chat.first_name }} ! I’m TVS Sahayak. I noticed you’re new here, so I’ve added you to my database to assist you better. How can I help you today? ",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        448
+      ],
+      "id": "54e35b2c-de3a-4ac3-855d-fc51eba0780e",
+      "name": "Send a text message1",
+      "webhookId": "a6b78b7c-fc40-47c5-b401-003f479c59f7",
+      "credentials": {
+        "telegramApi": {
+          "id": "dU0pMcgN2BbVVLzn",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Telegram Trigger": [
+      {
+        "json": {
+          "update_id": 284581137,
+          "message": {
+            "message_id": 141,
+            "from": {
+              "id": 1347676115,
+              "is_bot": false,
+              "first_name": "Knight",
+              "last_name": "dark",
+              "username": "pratyush2640",
+              "language_code": "en"
+            },
+            "chat": {
+              "id": 1347676115,
+              "first_name": "Knight",
+              "last_name": "dark",
+              "username": "pratyush2640",
+              "type": "private"
+            },
+            "date": 1755096334,
+            "text": "I have a loan of 7 lakh rs from bandhan bank.my interest rate is 10 % and my Emi is 7000 and my current location is Guwahati",
+            "entities": [
+              {
+                "offset": 40,
+                "length": 7,
+                "type": "url"
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get many rows",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Data": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a row": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "056e2888-1455-4dd7-b83e-47a4ce11d07e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "afbfbb6cf1bf7ec2f296b91ed4c5dc919ec7db2951624ab038dbb072c49cdc37"
+  },
+  "id": "16MF0M1kJ8GSXVww",
+  "tags": []
+}
